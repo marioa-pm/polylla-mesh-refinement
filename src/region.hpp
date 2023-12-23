@@ -30,8 +30,6 @@ class Region {
         int number_vertices = 0;
         Criterion &criterion;
 
-        public:
-
         Region(Triangulation &triangulation, Criterion &criterion) : tr(triangulation), it(triangulation.triangle_list.begin()),
             number_vertices(triangulation.n_vertices), criterion(criterion) {}
 
@@ -140,66 +138,10 @@ class Region {
     };
 
 
-    class Rectangle: public Region {
-
-        point center;
-        double min_x, max_x;
-        double min_y, max_y;
-
-        public:
-
-        Rectangle(point center, double width, double height, Triangulation &triangulation, Criterion &criterion) 
-            : Region(triangulation, criterion), center(center) {
-                min_x = center.first - width/2;
-                max_x = center.first + width/2;
-                min_y = center.second - height/2;
-                max_y = center.second + height/2;
-                number_vertices = 4;
-            }
-
-        bool in_region(int triangle) {
-            int current_edge = triangle;
-            for (int i=0; i<3; i++) {
-                int v = tr.origin(current_edge);
-                double x = tr.get_PointX(v);
-                double y = tr.get_PointY(v);
-
-                // Checks if the vertex is inside the rectangle defined by the coordinates.
-                if (min_x <= x && x <= max_x && min_y <= y && y <= max_y) {
-                    return true;
-                }
-                current_edge = tr.next(current_edge);
-            }
-            return false;
-        }
-
-        // Print the rectangle
-        void print(std::string filename) {
-            std::ofstream out(filename);
-            bool clockwise = false;
-
-            //  out<<"{ appearance  {+edge +face linewidth 2} LIST\n";
-            out<<"OFF"<<std::endl;
-            //num_vertices num_polygons 0
-            out<<std::setprecision(15)<<"4 1 0"<<std::endl;
-            //print nodes
-            out << std::to_string(min_x) << " " << std::to_string(min_y) << " 0" << std::endl;
-            out << std::to_string(max_x) << " " << std::to_string(min_y) << " 0" << std::endl;
-            out << std::to_string(max_x) << " " << std::to_string(max_y) << " 0" << std::endl;
-            out << std::to_string(min_x) << " " << std::to_string(max_y) << " 0" << std::endl;
-            if (clockwise) {
-                out << "4 3 2 1 0" << std::endl;
-            }
-            else {
-                out << "4 0 1 2 3" << std::endl;
-            }
-            out.close();
-        }
-    };
-
-
     class Polygon: public Region {
 
+        protected:
+        
         std::vector<point> points;
         std::vector<int> edges;
         std::string filename;
@@ -207,6 +149,9 @@ class Region {
         double min_y, max_y;
 
         public:
+
+        Polygon(Triangulation &triangulation, Criterion &criterion, double min_x, double max_x, double min_y, double max_y)
+            : Region(triangulation, criterion), min_x(min_x), max_x(max_x), min_y(min_y), max_y(max_y) {}
 
         Polygon(std::string name, Triangulation &triangulation, Criterion &criterion) 
             : Region(triangulation, criterion), filename(name) {
@@ -355,6 +300,56 @@ class Region {
 
         void print(std::string new_filename) {
             std::filesystem::copy(filename, new_filename);
+        }
+    };
+
+
+    class Rectangle: public Polygon {
+
+        public:
+
+        Rectangle(point center, double width, double height, Triangulation &triangulation, Criterion &criterion)
+            : Polygon(triangulation, criterion, center.first - width/2, center.first + width/2, center.second - height/2, center.second + height/2) {
+                number_vertices = 4;
+            }
+
+        bool in_region(int triangle) {
+            int current_edge = triangle;
+            for (int i=0; i<3; i++) {
+                int v = tr.origin(current_edge);
+                double x = tr.get_PointX(v);
+                double y = tr.get_PointY(v);
+
+                // Checks if the vertex is inside the rectangle defined by the coordinates.
+                if (min_x <= x && x <= max_x && min_y <= y && y <= max_y) {
+                    return true;
+                }
+                current_edge = tr.next(current_edge);
+            }
+            return false;
+        }
+
+        // Print the rectangle
+        void print(std::string filename) {
+            std::ofstream out(filename);
+            bool clockwise = false;
+
+            //  out<<"{ appearance  {+edge +face linewidth 2} LIST\n";
+            out<<"OFF"<<std::endl;
+            //num_vertices num_polygons 0
+            out<<std::setprecision(15)<<"4 1 0"<<std::endl;
+            //print nodes
+            out << std::to_string(min_x) << " " << std::to_string(min_y) << " 0" << std::endl;
+            out << std::to_string(max_x) << " " << std::to_string(min_y) << " 0" << std::endl;
+            out << std::to_string(max_x) << " " << std::to_string(max_y) << " 0" << std::endl;
+            out << std::to_string(min_x) << " " << std::to_string(max_y) << " 0" << std::endl;
+            if (clockwise) {
+                out << "4 3 2 1 0" << std::endl;
+            }
+            else {
+                out << "4 0 1 2 3" << std::endl;
+            }
+            out.close();
         }
     };
 
